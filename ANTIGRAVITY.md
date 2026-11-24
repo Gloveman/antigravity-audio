@@ -10,7 +10,7 @@ Upstream files in `skills/`, `tools/mixing/`, `tools/mastering/`, and `servers/`
 
 - `requirements-audio.txt` — Audio-only Python dependencies (drops Playwright, PostgreSQL, AWS S3, and MCP server extras).
 - `tools/antigravity/prepare_audio.py` — Universal input bridge: converts audio to 44.1 kHz stereo WAV, optionally trims trailing silence (`--trim-tail`), repairs digital clipping via FFmpeg `adeclip` (`--declip auto`), and optionally runs local **Demucs** (`--stems`) into `stems/<track>/`.
-- `tools/antigravity/audio_cli.py` — Unified CLI dispatcher (`prepare`, `qc`, `analyze`, `mix`, `master`, `ref-master`, `fix-dynamics`, `mono-check`, `codec-preview`).
+- `tools/antigravity/audio_cli.py` — Unified CLI dispatcher (`prepare`, `qc`, `analyze`, `mix`, `excite`, `master`, `ref-master`, `fix-dynamics`, `mono-check`, `adm-check`, `codec-preview`).
 - `.agents/skills/` — 3 lean Antigravity 2.0 skills:
   - [`audio-qc-analyzer`](.agents/skills/audio-qc-analyzer/SKILL.md) — 8-check technical QC, LUFS/dynamics analysis, mono fold-down, AAC codec preview
   - [`audio-mix-engineer`](.agents/skills/audio-mix-engineer/SKILL.md) — De-clip + Demucs bridge + per-stem/full-mix cleanup & EQ
@@ -52,10 +52,14 @@ python tools/antigravity/audio_cli.py master "./work_audio/polished" --genre edm
 # 또는 레퍼런스 음원 기반:
 # python tools/antigravity/audio_cli.py ref-master --reference "ref.wav" --target "./work_audio/polished/track.wav" --output-dir "./work_audio/polished/mastered"
 
-# 5. 최종 검증 (QC + 모노 호환성 + 128k AAC 블루투스/스트리밍 미리듣기)
+# 5. 최종 검증 (QC + 모노 호환성 + AAC 인터샘플 ADM 검증 + 128k AAC 미리듣기)
 python tools/antigravity/audio_cli.py qc "./work_audio/polished/mastered" --genre edm
 python tools/antigravity/audio_cli.py mono-check "./work_audio/polished/mastered"
+python tools/antigravity/audio_cli.py adm-check "./work_audio/polished/mastered" --ceiling -1.0
 python tools/antigravity/audio_cli.py codec-preview "./work_audio/polished/mastered/track.wav" -b 128
+
+# (선택) 어둡거나 답답한 스템에 상단 배음만 보강하려면:
+# python tools/antigravity/audio_cli.py excite "./work_audio/stems/track/vocals.wav" --amount-db 2.0
 ```
 
 ---

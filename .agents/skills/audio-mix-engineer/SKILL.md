@@ -21,6 +21,10 @@ Repair distorted sources and polish stem or full-mix balance using `tools/antigr
    - **Full-mix mode**: `python tools/antigravity/audio_cli.py mix "<work_dir>\declipped" --full-mix --genre "<genre>" --dry-run`
 3. **Render polished stereo WAVs**:
    Re-run without `--dry-run` (writes to `<input_dir>\polished\`). Add `-j 0` for parallel processing across albums.
+   For overly dark or muffled stems lacking presence, optionally add upper-band harmonics cleanly via:
+   ```powershell
+   python tools/antigravity/audio_cli.py excite "<stem.wav>" --amount-db 2.0 --low-hz 600 --high-hz 12000
+   ```
 4. **Verify polished output**:
    ```powershell
    python tools/antigravity/audio_cli.py qc "<work_dir>\polished" --genre "<genre>"

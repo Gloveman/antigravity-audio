@@ -33,6 +33,10 @@ Pass the folder containing WAV files directly (e.g. `<work_dir>/declipped`) with
 | `--demucs-model` | `htdemucs` | Use `htdemucs` (4 stems) or `htdemucs_6s` (6 stems) |
 | `--device` | `cpu` | `cpu` or `cuda` |
 
+## Harmonic Excitation (`audio_cli.py excite`)
+
+For dark or muffled stems (e.g. `bass` or dull `vocals`), `excite <input.wav> [--amount-db 2.0] [--low-hz 600] [--high-hz 12000] [--drive 20.0]` applies full-band `tanh` saturation followed by `HP(saturated) - HP(original)` differencing (`tools/mixing/excitation.py`), adding upper harmonics without bloating sub-bass. Use lower `--drive` (e.g. `2.0`–`5.0`) on louder signals; default `20.0` is calibrated for quiet dark stems, and avoid on already bright or metallic AI tracks.
+
 ## Available `mix-presets.yaml` Genres (72 built-in)
 
 Use `--genre <name>` with any key from `tools/mixing/mix-presets.yaml`, including:

@@ -26,6 +26,7 @@ Inspect local audio files before and after mixing or mastering via `tools/antigr
 4. **Verify mono compatibility and lossy codec translation** (for final masters):
    ```powershell
    python tools/antigravity/audio_cli.py mono-check "<wav_dir>"
+   python tools/antigravity/audio_cli.py adm-check "<wav_dir>" --ceiling -1.0
    python tools/antigravity/audio_cli.py codec-preview "<wav_dir>\<track>.wav" -b 128
    ```
 
@@ -34,9 +35,11 @@ Inspect local audio files before and after mixing or mastering via `tools/antigr
 - Run `qc` before mixing/mastering to catch upstream clipping (`> -1.0 dBTP`) or dead trailing silence (`--trim-tail`).
 - If `qc` reports `CLIPPING` or `TRUEPEAK` failures on a source file, route to `audio-mix-engineer` (`prepare --declip auto`) before mastering.
 - `mono-check` exits non-zero when any frequency band drops below `-6.0 dB` in mono fold-down (phase cancellation).
+- `adm-check` encodes to 256 kbps AAC, decodes back to PCM, and exits non-zero if inter-sample peaks exceed `--ceiling`.
 
 ## Verification Checklist
 
 - [ ] `qc` reports `0 FAIL` across all target WAV files
 - [ ] `analyze` shows True Peak `<= -1.0 dBFS` and expected LUFS range
 - [ ] `mono-check` verdict is `PASS` or `WARN` (zero `FAIL`)
+- [ ] `adm-check` reports `0 clips` against `-1.0 dBTP` ceiling

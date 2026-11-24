@@ -22,7 +22,8 @@ Invoke via `python tools/antigravity/audio_cli.py analyze <wav_dir> [-j 0]`:
 - Sample / True Peak (`dBFS`)
 - Short-term (`3s`) and momentary (`400ms`) LUFS dynamics spread
 
-## Mono Fold-Down (`mono-check`) & Codec Preview (`codec-preview`)
+## Mono Fold-Down (`mono-check`), ADM (`adm-check`), & Codec Preview (`codec-preview`)
 
 - `mono-check` compares stereo vs `(L+R)/2` across 7 bands (`sub_bass` 20–60 Hz through `air` 12–20 kHz) plus `1–4 kHz` vocal RMS and stereo correlation (`warn < 0.3`, band drop `fail < -6.0 dB`).
+- `adm-check <wav_or_dir> [-b 256] [--ceiling -1.0] [--encoder aac|afconvert|libfdk_aac]` tests Apple Digital Masters compliance by encoding to AAC, decoding back to float32 PCM, and flagging any inter-sample overshoot above `--ceiling`.
 - `codec-preview <track.wav> [-o out.aac.m4a] [-b 128]` renders a 128 kbps AAC file via FFmpeg to audition high-frequency smearing or post-encoding overshoot before distribution.

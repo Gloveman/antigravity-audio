@@ -33,6 +33,7 @@ Master polished WAVs using genre presets (`master_tracks.py`), reference matchin
    ```powershell
    python tools/antigravity/audio_cli.py qc "<wav_dir>\mastered" --genre "<genre>"
    python tools/antigravity/audio_cli.py mono-check "<wav_dir>\mastered"
+   python tools/antigravity/audio_cli.py adm-check "<wav_dir>\mastered" --ceiling -1.0
    python tools/antigravity/audio_cli.py codec-preview "<wav_dir>\mastered\<track>.wav" -b 128
    ```
 
