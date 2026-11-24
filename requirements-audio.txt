@@ -1,0 +1,24 @@
+# Antigravity Standalone Audio Processing Dependencies
+#
+# Install into your Python environment (Python 3.11+):
+#   pip install -r requirements-audio.txt
+#
+# System prerequisite:
+#   - ffmpeg & ffprobe on PATH (used for format conversion, adeclip, and codec preview)
+#
+# Optional (for local AI 4/6-stem separation via `prepare_audio.py --stems`):
+#   pip install demucs
+
+# Core DSP, analysis, and mastering
+numpy==2.4.6
+scipy==1.17.1
+soundfile==0.14.0
+pyloudnorm==0.2.0
+pyyaml==6.0.3
+mutagen==1.48.1
+
+# Per-stem & full-mix noise reduction
+noisereduce==3.0.3
+
+# Reference-track tonal/loudness matching
+matchering==2.0.6
