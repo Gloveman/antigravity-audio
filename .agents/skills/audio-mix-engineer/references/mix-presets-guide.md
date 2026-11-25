@@ -37,6 +37,32 @@ Pass the folder containing WAV files directly (e.g. `<work_dir>/declipped`) with
 
 For dark or muffled stems (e.g. `bass` or dull `vocals`), `excite <input.wav> [--amount-db 2.0] [--low-hz 600] [--high-hz 12000] [--drive 20.0]` applies full-band `tanh` saturation followed by `HP(saturated) - HP(original)` differencing (`tools/mixing/excitation.py`), adding upper harmonics without bloating sub-bass. Use lower `--drive` (e.g. `2.0`–`5.0`) on louder signals; default `20.0` is calibrated for quiet dark stems, and avoid on already bright or metallic AI tracks.
 
+## Anti-Slop 6-Stem Presets (`audio_cli.py antislop-mix`)
+
+For AI-generated rock/band tracks separated with `prepare_audio.py --stems --demucs-model htdemucs_6s`, `antislop-mix` targets metallic guitar/cymbal fizz and buried vocals:
+
+| Preset | Profile | Vocal Gain | Sidechain | Warmth | Recommended Master Follow-Up |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `band-analog` | Indie / girl-band live polish, guitar `>9.5 kHz` & cymbal `>13.5 kHz` rolloff | `+2.2 dB` | Off | `drive=0.14`, `60%` wet | `--genre indie-rock --linear-phase-eq --deess --bass-mono-freq 100 --ceiling -1.2` |
+| `rock-metal` | Heavy rock/metal 4x12 guitar cabinet `>8.8 kHz` cut, 300 Hz husky vocal chest | `+3.6 dB` | `1.8:1` on `guitar/other/piano` | `drive=0.15`, `60%` wet | `--genre metal --linear-phase-eq --deess --bass-mono-freq 100 --ceiling -1.2` |
+
+- **Key flags**: `--list-presets`, `--measure-vb` (active 10s vocal-to-backing dB balance), `--vocal-gain-db`, `--drive`, `--no-sidechain`, `--dry-run`.
+- **Silent `piano.wav` auto-bypass**: Quiet bleed-only `piano.wav` stems (`peak < -35 dBFS` or `rms < -55 dBFS`) are skipped automatically unless `--include-piano` is passed.
+
+## Pitch & Tempo Shifting (`audio_cli.py pitch-tempo`)
+
+Uses FFmpeg's `rubberband` engine with `pitchq=quality`, `channels=together` (stereo phase coherence), `-3.0 dB` pre-shift headroom, and a `-1.0 dBFS` safety `alimiter` ceiling:
+
+| Mode | Formant | Transients / Detector | Window | Best For |
+| :--- | :--- | :--- | :--- | :--- |
+| `vocal` (default) | `preserved` | `mixed` / `compound` | `standard` | Full songs & singing vocals |
+| `instrumental` | `shifted` | `crisp` / `compound` | `standard` | Melodies, whistle, acoustic/synth |
+| `drums` | `shifted` | `crisp` / `percussive` | `short` | Drum stems (minimal pre-echo) |
+| `smooth` | `preserved` | `smooth` / `soft` | `long` | Pads, strings, sustained ballads |
+
+- **Video A/V sync**: Video inputs (`.mp4`, `.mkv`, `.mov`, `.webm`) keep sync automatically (`-c:v copy` when `--speed 1.0`, or `setpts=PTS/speed` + `libx264` when speed changes).
+- **Large shifts (`>= ±4` semitones or `>= ±20%` speed)**: Separate stems first (`prepare --stems`) and shift `drums.wav` (`--mode drums`) and `vocals.wav` (`--mode vocal`) independently to prevent transient smearing.
+
 ## Available `mix-presets.yaml` Genres (72 built-in)
 
 Use `--genre <name>` with any key from `tools/mixing/mix-presets.yaml`, including:
