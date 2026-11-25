@@ -2,6 +2,7 @@
 """Unified Antigravity audio processing CLI dispatcher.
 
 Routes standalone audio subcommands to `tools/antigravity/prepare_audio.py`,
+`tools/antigravity/antislop_mix.py`, `tools/antigravity/pitch_tempo.py`,
 `tools/mixing/mix_tracks.py`, and `tools/mastering/*.py` with UTF-8 stdio
 and clean dependency error hints. Uses Python stdlib only at top level so
 `--help` always works even before `requirements-audio.txt` is installed.
@@ -21,6 +22,8 @@ SCRIPT_TARGETS: dict[str, Path] = {
     "qc": REPO_ROOT / "tools" / "mastering" / "qc_tracks.py",
     "analyze": REPO_ROOT / "tools" / "mastering" / "analyze_tracks.py",
     "mix": REPO_ROOT / "tools" / "mixing" / "mix_tracks.py",
+    "antislop-mix": REPO_ROOT / "tools" / "antigravity" / "antislop_mix.py",
+    "pitch-tempo": REPO_ROOT / "tools" / "antigravity" / "pitch_tempo.py",
     "master": REPO_ROOT / "tools" / "mastering" / "master_tracks.py",
     "ref-master": REPO_ROOT / "tools" / "mastering" / "reference_master.py",
     "fix-dynamics": REPO_ROOT / "tools" / "mastering" / "fix_dynamic_track.py",
