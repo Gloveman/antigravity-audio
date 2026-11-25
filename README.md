@@ -1,207 +1,160 @@
-# Claude AI Music Skills
+# Antigravity Audio
 
-I love music but never learned an instrument. AI became the creative outlet that was always out of reach. This project started as a way to go deep on Claude Code plugin architecture, agentic workflows, multi-model orchestration, and MCP tooling. Music was the domain because it was personal.
+Standalone local audio engineering CLI and [Google Antigravity](https://antigravity.google) 2.0 skills for technical QC, Demucs stem separation, anti-slop mixing, distortion-resistant Rubber Band pitch/tempo shifting, and streaming/club mastering.
 
-What it actually does: a Claude Code plugin that turns a conversation into a full album production pipeline. You describe what you want to make, and it handles concept development, lyrics, [Suno](https://suno.com) prompts (an AI music generation platform), audio mastering, and release prep — with quality gates and source verification at every stage.
-
-Questions? See the [FAQ](FAQ.md).
-
-![Version](https://img.shields.io/github/v/release/bitwize-music-studio/claude-ai-music-skills?label=version&color=blue)
+Adapted from the audio-processing engine of [`bitwize-music-studio/claude-ai-music-skills`](https://github.com/bitwize-music-studio/claude-ai-music-skills) (CC0-1.0) for **local audio files** (`.wav`, `.mp3`, `.flac`, `.m4a`, `.webm`, `.ogg`, `.opus`) and **video files** (`.mp4`, `.mkv`, `.mov`, `.webm`) **without requiring Suno MCP, PostgreSQL, Playwright, or Claude Code plugins**.
 
 > [!NOTE]
-> Active development happens on the `develop` branch — `main` only receives tested, stable releases. If you run into issues, [open an issue](https://github.com/bitwize-music-studio/claude-ai-music-skills/issues) or submit a PR.
+> Development on this fork happens on the `antigravity-audio` branch using an **additive-only** layout (`tools/antigravity/`, `.agents/skills/`, `requirements-audio.txt`, `README.md`, `ANTIGRAVITY.md`). Upstream `skills/`, `tools/mixing/`, `tools/mastering/`, and `servers/` remain untouched so `upstream/main` updates merge cleanly.
 
 ---
 
-## See It in Action
+## Key Capabilities
 
-![Listening to two takes in iTerm2 panes beside Claude Code, with the track's lyrics below](docs/images/listen-iterm2.gif)
-
-`/bitwize-music:listen the-nub 02 --iterm2` opens both takes of a track as Suno players beside the session, with the track's lyrics underneath, so you can hear them side by side without leaving the terminal.
-
-macOS is my daily driver, so it's where this plugin gets the most real-world use. Every change is also tested on Linux and Windows in CI. The iTerm2 panes shown here need macOS. Everywhere else, the same command opens your takes in the browser.
-
-## Example Workflow
-
-```
-You:    "Let's make an album about the 2016 Bangladesh Bank heist"
-Claude: Creates album structure, runs 7-phase concept planning
-
-You:    "Start the research"
-Claude: Dispatches legal, financial, and security researchers in parallel
-        Gathers DOJ filings, SWIFT documentation, malware analysis
-        Cross-verifies sources, flags claims that need human review
-
-You:    "Sources look good. Let's write track 1"
-Claude: Drafts lyrics, checks prosody and rhyme schemes
-        Scans for pronunciation risks, suggests phonetic fixes
-        Builds the Suno style prompt and generation settings (model, Variety, Max Mode)
-
-You:    "Track sounds great, here are the stems"
-Claude: Imports stems from Suno, polishes per-stem
-        Masters to -14 LUFS for streaming
-        Generates promo video and social media copy
-```
-
-Concept to released album, from the terminal. Connect Suno's own MCP server and generation happens there too — and you still listen to every take before it's approved.
-
-> [!WARNING]
-> [Suno's MCP server](https://suno.com/mcp) is available on every Suno plan, and songs made through it use your plan's credits. Visuals (album art, lyric videos, promo clips and music videos) need a paid Suno plan, and some AI apps only let you add a connector on one of their own paid plans. Without the server, the rest of the plugin works the same, and you paste the lyrics and style prompt into suno.com as before. Suno still adds tools and changes their arguments, so if one of the skills that use it (`generate`, `listen`, `check-take`, `edit-take`, `extend-take`, `sound-effects`, `suno-voice`, `lyric-video`, `music-video` and `import-audio --from-suno`) misbehaves after a Suno update, [open an issue](https://github.com/bitwize-music-studio/claude-ai-music-skills/issues).
+| Area | Subcommands | What It Does |
+| :--- | :--- | :--- |
+| **Input & Stems** | `prepare` | Converts audio to 44.1 kHz stereo WAV, trims trailing silence (`--trim-tail`), repairs digital clipping via FFmpeg `adeclip` (`--declip auto`), and runs local Demucs (`htdemucs` / `htdemucs_6s`) |
+| **Mixing & Anti-Slop** | `mix`, `antislop-mix`, `excite` | 72-genre stem/full-mix cleanup (`mix`), 6-stem AI guitar/cymbal fizz removal + vocal pocket presets (`band-analog`, `rock-metal`), and upper-harmonic excitation for dark stems (`excite`) |
+| **Pitch & Tempo** | `pitch-tempo` | FFmpeg `rubberband` shifting (`vocal`, `instrumental`, `drums`, `smooth`) with `pitchq=quality`, `channels=together`, `-3 dB` pre-headroom, `-1 dBFS` safety limiter, and synced `libx264` MP4 video output |
+| **Mastering** | `master`, `ref-master`, `fix-dynamics` | 406-genre LUFS/true-peak mastering with linear-phase EQ & bass-mono summing (`master`), reference track matching via `matchering` (`ref-master`), and excessive dynamic-range repair |
+| **QC & Validation** | `qc`, `analyze`, `mono-check`, `adm-check`, `codec-preview` | 8-check technical QC, LUFS/spectral balance analysis, stereo-to-mono fold-down check, 256k AAC inter-sample clipping check (`adm-check`), and 128k AAC auditioning |
 
 ---
 
-## Install
+## Quick Setup
 
-```bash
-/plugin marketplace add bitwize-music-studio/claude-ai-music-skills
-/plugin install bitwize-music@bitwize-music
+Requires **Python 3.11+** and **FFmpeg / FFprobe** on `PATH` (with `librubberband` enabled for `pitch-tempo`).
+
+```powershell
+# 1. Install audio-only Python dependencies
+pip install -r requirements-audio.txt
+
+# 2. (Optional) Install local AI stem separation (Demucs)
+pip install demucs
+
+# 3. Verify FFmpeg & Rubber Band filter availability
+ffmpeg -version
+ffmpeg -hide_banner -filters | Select-String rubberband
 ```
 
-Then run `/bitwize-music:setup` to detect your environment and install dependencies. Run `/bitwize-music:configure` to set your artist name and workspace paths.
+Verify the CLI entry point:
 
-**Platform**: macOS, Linux, WSL2, and native Windows are all fully supported. The full test suite runs on windows-latest in CI (plus dedicated Windows legs for the MCP boot check and MuseScore PDF export) — the MCP server, state cache, non-audio workflow, and the ffmpeg audio pipeline all run natively there. Promo video works on Windows too, though it's verified by hand rather than continuously guarded (its tests mock ffmpeg). Sheet music works natively too: MuseScore PDF export is CI-verified on windows-latest, and AnthemScore transcription runs against a licensed install (its free trial exposes no CLI on any OS, so that caveat isn't Windows-specific). Python 3.11+ for the MCP server and audio tools. See the [compatibility matrix](reference/cross-platform/tool-compatibility-matrix.md) for the per-feature breakdown.
-
-### OpenAI Codex (experimental)
-
-Codex can install the plugin from this repository too:
-
-```bash
-codex plugin marketplace add bitwize-music-studio/claude-ai-music-skills
-codex plugin add bitwize-music@bitwize-music
-```
-
-All 63 skills load, and the MCP server runs from the same `~/.bitwize-music/venv` that Claude Code uses, on macOS, Linux and Windows. The `setup` skill still assumes Claude Code, so if you haven't set the plugin up there, create the venv by hand (Python 3.11+):
-
-```bash
-python3 -m venv ~/.bitwize-music/venv
-~/.bitwize-music/venv/bin/python -m pip install -r https://raw.githubusercontent.com/bitwize-music-studio/claude-ai-music-skills/main/requirements.txt
-```
-
-On Windows (cmd), run `python -m venv %USERPROFILE%\.bitwize-music\venv`, then `%USERPROFILE%\.bitwize-music\venv\Scripts\python.exe -m pip install -r` with the same URL.
-
-So far Codex support covers discovery and the MCP tools, and many skills still assume Claude Code. [#548](https://github.com/bitwize-music-studio/claude-ai-music-skills/issues/548) tracks the rest.
-
----
-
-## Architecture
-
-This is where the engineering lives. The plugin is a case study in how far you can push Claude Code's plugin system.
-
-### Skill System (63 Skills)
-
-Each skill is a self-contained markdown file with a YAML frontmatter that declares its model, description, and when it should activate. Skills range from simple clipboard operations to multi-step creative workflows. Claude routes to skills automatically based on context, or you invoke them directly with `/bitwize-music:<name>`.
-
-The lyric-writer knows prosody rules, rhyme scheme analysis, and Suno's pronunciation quirks. The mastering-engineer knows loudness targets per platform and genre-specific EQ curves. The researcher coordinates parallel sub-agents across 10 domain specializations.
-
-See [docs/skills.md](docs/skills.md) for the full reference.
-
-### Multi-Model Orchestration
-
-Skills declare which Claude model they need. Creative work that directly impacts music quality runs on Opus. Coordination and reasoning tasks use Sonnet. Mechanical operations (imports, validation, clipboard) run on Haiku.
-
-| Tier | `model:` | Skills | Rationale |
-|------|----------|--------|-----------|
-| Creative | `opus` | 7 | Lyrics, Suno prompts, album concepts, legal/verification research — output quality defines the music |
-| Reasoning | `sonnet` | 37 | Research coordination, pronunciation analysis, most workflows |
-| Mechanical | `haiku` | 15 | Imports, validation, clipboard, help — speed over creativity |
-
-Skills declare the tier alias, not a pinned version, so each one tracks the current frontier model in its tier automatically — no per-skill edit when a new Claude generation ships.
-
-This project pushes Claude Code hard — multi-agent research, real-time audio analysis, sub-agent orchestration across model tiers. It works best on the Max subscription. The standard Pro subscription will hit rate limits during multi-track sessions.
-
-See [reference/model-strategy.md](reference/model-strategy.md) for per-skill rationale.
-
-### MCP Server (80+ Tools)
-
-A Python MCP server exposes 80+ tools for instant state queries, audio analysis, lyrics processing, and database operations. The server is the plugin's nervous system — skills call MCP tools instead of reading files directly, which keeps responses fast and state consistent.
-
-Key tool categories:
-- **State management** — album/track lookups, session context, cache rebuild
-- **Lyrics analysis** — syllable counting, readability scoring, rhyme detection, section validation, cross-track repetition
-- **Audio processing** — mastering, stem analysis, QC checks, promo video generation
-- **Database** — tweet/promo content management via PostgreSQL
-
-### Research System
-
-For documentary and true-story albums, the research system coordinates parallel investigation across 10 domain-specific sub-agents. A lead researcher dispatches to specialists (legal, financial, security, government, journalism, etc.), each trained on where to find primary sources in their domain. A verification agent cross-checks all claims before human review.
-
-The full pipeline: gather sources, verify citations, require human sign-off, then — and only then — allow lyrics generation. Every claim in the music traces back to a captured, verified source.
-
-### Quality Gates
-
-Nothing ships without passing gates:
-- **Lyrics**: 13-point checklist (rhyme, prosody, pronunciation, POV consistency, factual accuracy)
-- **Pre-generation**: Sources verified, explicit flags set, style prompt complete, artist names cleared
-- **Audio**: 7-point QC (loudness, clipping, silence, phase, stereo width, frequency balance, dynamic range)
-- **Structure**: Album directory validation, file location checks, content integrity
-
-### Genre Coverage
-
-72 genre directories with production guides, mastering presets, artist deep-dives, and Suno-specific tips. From afrobeats to vaporwave, each genre includes subgenre breakdowns, lyric conventions, and reference artists.
-
-### CI/CD
-
-6 GitHub Actions workflows: tests (6,022 across ubuntu/macOS/Windows, plus lint, security scanning with bandit + pip-audit, and static validation), real-service integration (Postgres, SeaweedFS/S3, MuseScore), nightly deep tests, auto-release from changelog, PR target enforcement, and version sync. Dependabot watches pip and Actions versions weekly.
-
-Coverage is measured on all three OSes and gated on the **combined** total, not one platform's view. That matters because every `sys.platform == "win32"` branch is unreachable on Linux — measuring only there made the platform-specific code invisible to the gate, which is exactly where this project's real bugs have lived. The merge is asserted rather than assumed: a mis-specified path mapping makes `coverage combine` report the Linux-only number while looking like success, so the job fails unless a known win32-only line is genuinely covered.
-
----
-
-## Project Structure
-
-```
-skills/              60 skill definitions (markdown + YAML frontmatter)
-servers/             MCP server (Python, 80+ tools)
-tools/               Audio mastering, promo videos, sheet music, cloud uploads
-reference/           46+ docs — Suno guides, mastering workflows, genre references
-genres/              72 genre directories with production guides
-templates/           Album, track, artist, research templates
-tests/               4,412 tests across 14 categories
-config/              Example config and setup docs
+```powershell
+python tools/antigravity/audio_cli.py --help
 ```
 
 ---
 
-## Detailed Documentation
+## Common Workflows
 
-| Topic | Location |
-|-------|----------|
-| All 63 skills | [docs/skills.md](docs/skills.md) |
-| Configuration | [docs/configuration.md](docs/configuration.md) |
-| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
-| Changelog | [CHANGELOG.md](CHANGELOG.md) |
-| Contributing | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Model strategy | [reference/model-strategy.md](reference/model-strategy.md) |
-| Skill decision tree | [reference/SKILL_INDEX.md](reference/SKILL_INDEX.md) |
-| Suno best practices | [reference/suno/best-practices.md](reference/suno/best-practices.md) |
-| Suno model catalog | [reference/suno/models.md](reference/suno/models.md) |
-| The story behind bitwize-music | [bitwizemusic.com/behind-the-music](https://www.bitwizemusic.com/behind-the-music/) |
+### 1. Standard Remastering Pipeline (Stems or Full-Mix)
+
+```powershell
+# Prepare audio: normalize, de-clip, trim dead tail silence, and split 4 stems
+python tools/antigravity/audio_cli.py prepare "track.mp3" -o "./work_audio" --declip auto --trim-tail --stems
+
+# Audit technical QC and loudness/spectral balance
+python tools/antigravity/audio_cli.py qc "./work_audio/declipped" --genre edm
+python tools/antigravity/audio_cli.py analyze "./work_audio/declipped"
+
+# Preview and render polished mix (or pass "./work_audio/declipped --full-mix")
+python tools/antigravity/audio_cli.py mix "./work_audio" --genre edm --dry-run
+python tools/antigravity/audio_cli.py mix "./work_audio" --genre edm
+
+# Master to target LUFS with true-peak ceiling and sub-bass mono alignment
+python tools/antigravity/audio_cli.py master "./work_audio/polished" --genre edm --target-lufs -10.5 --ceiling -1.2 --bass-mono-freq 110 --linear-phase-eq
+
+# Final delivery checks
+python tools/antigravity/audio_cli.py qc "./work_audio/polished/mastered" --genre edm
+python tools/antigravity/audio_cli.py mono-check "./work_audio/polished/mastered"
+python tools/antigravity/audio_cli.py adm-check "./work_audio/polished/mastered" --ceiling -1.2
+python tools/antigravity/audio_cli.py codec-preview "./work_audio/polished/mastered/track.wav" -b 128
+```
+
+### 2. AI Rock / Band 6-Stem Anti-Slop (`antislop-mix`)
+
+For AI-generated rock/band covers with metallic guitar/cymbal fizz and buried vocals:
+
+```powershell
+# Separate 6 stems (vocals, drums, bass, guitar, piano, other)
+python tools/antigravity/audio_cli.py prepare "cover.webm" -o "./work_band" --declip auto --trim-tail --stems --demucs-model htdemucs_6s
+
+# List presets or render with active vocal-to-backing (V-B) balance measurement
+python tools/antigravity/audio_cli.py antislop-mix --list-presets
+python tools/antigravity/audio_cli.py antislop-mix "./work_band" --preset rock-metal --measure-vb
+
+# Master the polished mix
+python tools/antigravity/audio_cli.py master "./work_band/polished" --genre metal --linear-phase-eq --deess --bass-mono-freq 100 --ceiling -1.2
+```
+
+Available presets:
+- `band-analog`: Indie / girl-band live polish (guitar `>9.5 kHz` & cymbal `>13.5 kHz` rolloff, `+2.2 dB` vocal lift, `tanh` warmth).
+- `rock-metal`: Vocal-forward heavy rock/metal (`300 Hz` chest warmth, 4x12 guitar `>8.8 kHz` fizz cut, `1.8:1` vocal-to-backing sidechain, `+3.6 dB` vocal lift).
+
+### 3. Distortion-Resistant Pitch & Tempo Shifting (`pitch-tempo`)
+
+```powershell
+# Slowed & pitched-down vocal track (preserves vocal formants and stereo coherence)
+python tools/antigravity/audio_cli.py pitch-tempo "track.wav" --semitones -2.0 --speed 0.85 --mode vocal
+
+# Instrumental / melody video shift (keeps A/V synchronized using libx264)
+python tools/antigravity/audio_cli.py pitch-tempo "clip.mp4" --semitones 2 --speed 1.1 --mode instrumental
+
+# Inspect all 4 modes (vocal, instrumental, drums, smooth)
+python tools/antigravity/audio_cli.py pitch-tempo --list-modes
+```
 
 ---
 
-## Contributors
+## Antigravity 2.0 Skills (`.agents/skills/`)
 
-<a href="https://github.com/bitwize-music"><img src="https://images.weserv.nl/?url=github.com/bitwize-music.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@bitwize-music"></a>
-<a href="https://github.com/markus-michalski"><img src="https://images.weserv.nl/?url=github.com/markus-michalski.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@markus-michalski"></a>
-<a href="https://github.com/zeel2104"><img src="https://images.weserv.nl/?url=github.com/zeel2104.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@zeel2104"></a>
-<a href="https://github.com/alijahak"><img src="https://images.weserv.nl/?url=github.com/alijahak.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@alijahak"></a>
-<a href="https://github.com/DaveMatNat"><img src="https://images.weserv.nl/?url=github.com/DaveMatNat.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@DaveMatNat"></a>
-<a href="https://github.com/thejesh23"><img src="https://images.weserv.nl/?url=github.com/thejesh23.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@thejesh23"></a>
-<a href="https://github.com/tgh612"><img src="https://images.weserv.nl/?url=github.com/tgh612.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@tgh612"></a>
-<a href="https://github.com/MrReasonable"><img src="https://images.weserv.nl/?url=github.com/MrReasonable.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@MrReasonable"></a>
-<a href="https://github.com/medinabestari"><img src="https://images.weserv.nl/?url=github.com/medinabestari.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@medinabestari"></a>
-<a href="https://github.com/cbrahms"><img src="https://images.weserv.nl/?url=github.com/cbrahms.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@cbrahms"></a>
-<a href="https://github.com/wufei-png"><img src="https://images.weserv.nl/?url=github.com/wufei-png.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@wufei-png"></a>
-<a href="https://github.com/divya0795"><img src="https://images.weserv.nl/?url=github.com/divya0795.png&h=60&w=60&fit=cover&mask=circle" width="60" height="60" alt="@divya0795"></a>
+Open this repository as a workspace in Google Antigravity to auto-load the 3 standalone audio skills:
 
-If you make something with this, I'd genuinely love to hear it — [@bitwizemusic](https://x.com/bitwizemusic) on X, [join the Discord](https://discord.gg/dMURByGF), or [open a discussion](https://github.com/bitwize-music-studio/claude-ai-music-skills/discussions).
+| Skill | Responsibility | Reference |
+| :--- | :--- | :--- |
+| [`audio-qc-analyzer`](.agents/skills/audio-qc-analyzer/SKILL.md) | 8-check technical QC, LUFS/spectral diagnosis, mono fold-down, AAC ADM & preview | [`qc-checks.md`](.agents/skills/audio-qc-analyzer/references/qc-checks.md) |
+| [`audio-mix-engineer`](.agents/skills/audio-mix-engineer/SKILL.md) | De-clipping, Demucs stem prep, 72-genre mix, 6-stem anti-slop, excitation, pitch/tempo | [`mix-presets-guide.md`](.agents/skills/audio-mix-engineer/references/mix-presets-guide.md) |
+| [`audio-mastering-engineer`](.agents/skills/audio-mastering-engineer/SKILL.md) | 406-genre mastering, `matchering` reference matching, dynamic repair | [`mastering-targets.md`](.agents/skills/audio-mastering-engineer/references/mastering-targets.md) |
+
+To keep these skills experimental and workspace-scoped, leave them inside `.agents/skills/` rather than registering them globally.
 
 ---
 
-## License
+## Repository Structure (`antigravity-audio` Additions)
 
-CC0 — Public Domain. Do whatever you want with it.
+```text
+.agents/skills/
+  audio-qc-analyzer/         # QC, LUFS, mono-check, adm-check, codec-preview skill
+  audio-mix-engineer/        # Prepare, Demucs, mix, antislop-mix, pitch-tempo, excite skill
+  audio-mastering-engineer/  # Mastering, ref-master, fix-dynamics skill
+tools/antigravity/
+  audio_cli.py               # Unified CLI dispatcher (13 subcommands)
+  prepare_audio.py           # Format conversion, trim-tail, adeclip, Demucs bridge
+  antislop_mix.py            # 6-stem anti-slop EQ, vocal sidechain, tanh warmth
+  pitch_tempo.py             # Rubber Band pitch/tempo shifter for audio & video
+requirements-audio.txt       # Minimal Python audio dependencies
+ANTIGRAVITY.md               # Quick command reference
+```
 
-## Disclaimer
+Upstream audio DSP engines used by `audio_cli.py` live in [`tools/mixing/`](tools/mixing/) and [`tools/mastering/`](tools/mastering/).
 
-Artist and song references in the genre documentation are for educational and reference purposes only. This plugin does not encourage creating infringing content. Users are responsible for ensuring their generated content complies with applicable laws and platform terms of service.
+---
+
+## Syncing Upstream Updates
+
+```powershell
+git checkout main
+git fetch upstream
+git merge --ff-only upstream/main
+git push origin main
+
+git checkout antigravity-audio
+git merge main
+```
+
+---
+
+## License & Attribution
+
+- Original upstream project: [`bitwize-music-studio/claude-ai-music-skills`](https://github.com/bitwize-music-studio/claude-ai-music-skills) ([CC0-1.0](LICENSE))
+- Antigravity adaptation & standalone audio CLI extensions on `antigravity-audio` are released under the same [CC0-1.0](LICENSE) license.
